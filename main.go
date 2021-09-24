@@ -1,12 +1,25 @@
 package main
 
-import (
-	"fmt"
-)
+import "fmt"
 
 func main() {
-	a := []byte{0}
+	b := []byte{0}
 
-	fmt.Println(a)
+	for i := 0; i < 10; i++ {
+		fmt.Println(b)
+		b = incremBit(b)
+	}
 
+}
+
+func incremBit(b []byte) []byte {
+
+	for i := len(b) - 1; i >= 0; i-- {
+		if b[i] == byte(0) {
+			b[i] = byte(1)
+			return b
+		}
+	}
+	b = append([]byte{1}, b...)
+	return b
 }
