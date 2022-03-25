@@ -58,19 +58,19 @@
             0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
             0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2 ];
 
-        // initial hash value [§5.3.3]
+        // initial hash value [§5.3.3] 
         const H = [
             0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19 ];
 
         // PREPROCESSING [§6.2.1]
-
+            
         msg += String.fromCharCode(0x80);  // add trailing '1' bit (+ 0's padding) to string [§5.1.1]
 
         // convert string msg into 512-bit blocks (array of 16 32-bit integers) [§5.2.1]
         const l = msg.length/4 + 2; // length (in 32-bit integers) of msg + ‘1’ + appended length
         const N = Math.ceil(l/16);  // number of 16-integer (512-bit) blocks required to hold 'l' ints
         const M = new Array(N);     // message M is N×16 array of 32-bit integers
-
+        
         for (let i=0; i<N; i++) {
             M[i] = new Array(16);
             for (let j=0; j<16; j++) { // encode 4 chars per integer (64 per block), big-endian encoding
@@ -86,6 +86,7 @@
         M[N-1][14] = Math.floor(lenHi);
         M[N-1][15] = lenLo;
 
+       
 
         // HASH COMPUTATION [§6.2.2]
 
@@ -96,7 +97,6 @@
             for (let t=0;  t<16; t++) W[t] = M[i][t];
             for (let t=16; t<64; t++) {
                 W[t] = (Sha256.σ1(W[t-2]) + W[t-7] + Sha256.σ0(W[t-15]) + W[t-16]) >>> 0;
-                console.log(W[t])
             }
             
             // 2 - initialise working variables a, b, c, d, e, f, g, h with previous hash value

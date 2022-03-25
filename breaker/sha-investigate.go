@@ -32,7 +32,6 @@ func Hash(msg string) string {
 	for _, chunk := range msgBSlice {
 
 		msgSchedule := createMessageSchedule(chunk)
-		fmt.Println(msgSchedule)
 
 		a := H[0]
 		b := H[1]
@@ -80,8 +79,7 @@ func preprocess(msg string) [][]uint32 {
 	msgSize := intToByteSlice(len(msgBytes)*8, 8)
 
 	//Add trailing '1' bit
-	msgBytes = append(msgBytes, 1)
-
+	msgBytes = append(msgBytes, 0x80)
 	//Add traliing 0's
 	for len(msgBytes)%64 != 56 {
 		msgBytes = append(msgBytes, 0)
@@ -189,7 +187,7 @@ func Maj(x uint32, y uint32, z uint32) uint32 {
 }
 
 func main() {
-	msg := ""
+	msg := "Hello World!"
 	hash := Hash(msg)
 	fmt.Println(hash)
 }
