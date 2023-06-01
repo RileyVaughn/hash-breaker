@@ -1,48 +1,157 @@
 package main
 
 import (
-	"breaker/sha256"
 	"fmt"
 	"log"
+	"math"
+	"os"
 	"strconv"
+	"strings"
 )
 
+var BITS uint8 = 8
+
 func main() {
-	msg := "Hello World!"
-	hash := sha256.Hash(msg)
-	fmt.Println(hash)
 
-	ls := sha256.HashLastStep(msg)
-	reverseStep(ls)
+	var a string = "a"
+	var b string = "b"
 
-}
+	sum := add8_2zn(a, b)
 
-func stringToHexSlice(hash string) [8]uint32 {
+	//Test(BITS)
 
-	var H [8]uint32
-	for i := 0; i < len(hash); i = i + 8 {
-		hx, err := strconv.ParseInt(hash[i:i+8], 16, 64)
-		hexHash := uint32(hx)
-		if err != nil {
-			log.Fatalln("Error converting hash string into hex slice", err)
-		}
-		H[i/8] = hexHash
+	err := os.WriteFile("sum.txt", []byte(sum), 0644)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	return H
 }
 
-func reverseStep(step [8]uint32) {
+func Test(size uint8) {
 
-	var prev [8]uint32
+	num := uint8(math.Pow(2, float64(size)))
+	pass := true
 
-	prev[0] = step[1]
-	prev[1] = step[2]
-	prev[2] = step[3]
-	prev[3] = step[4] - step[0] + sha256.Σ0(prev[0]) + sha256.Maj(prev[0], prev[1], prev[2])
-	prev[4] = step[5]
-	prev[5] = step[6]
-	prev[6] = step[7]
-	prev[7] = 0
-	fmt.Printf("%x", prev)
+	for i := uint8(0); i < num; i++ {
+		for j := uint8(0); j < num; j++ {
+
+			a := add_bit_8_2(i, j) % num
+			b := (i + j) % num
+
+			if a != b {
+				pass = false
+				fmt.Printf("(%v) (%v) %v %v\n", i, j, a, b)
+
+			}
+
+		}
+	}
+	fmt.Println(pass)
+}
+
+func add8(a string, b string) string {
+
+	for i := 0; i < 3; i++ {
+
+		tempa := a
+		tempb := b
+
+		a = tempa + "^" + tempb
+		b = "((" + tempa + "<<1)&(" + tempb + "<<1))"
+
+	}
+	return a
+}
+
+func add8_2zn(a string, b string) string {
+
+	a = a + "+" + b
+	b = strings.Replace(a, "+", "_1", 1) + "_1"
+
+	for i := 1; i < int(BITS); i++ {
+
+		tempa := a
+		tempb := b
+
+		// Add tempa and tempb
+		a = tempa + "+" + tempb
+
+		//don't waste computation on calculatin unused b
+		if i+1 < int(BITS) {
+
+			b = ""
+
+			// Multiply each monomial in tempa with the monomial in tempb
+
+			tempa2 := strings.Split(tempa, "+")
+			tempb2 := strings.Split(tempb, "+")
+
+			for _, mona := range tempa2 {
+				for _, monb := range tempb2 {
+					b = b + "+" + mona + monb
+				}
+			}
+			//remove extra + sign
+			b = b[1:]
+
+			//Insert _1
+			b = strings.ReplaceAll(b, "b", "b_1")
+			b = strings.ReplaceAll(b, "a", "a_1")
+
+			// Replace _1_X with _(X+1)
+			for j := 1; j < int(BITS); j++ {
+				val := "1_" + strconv.Itoa(j)
+				for strings.Contains(b, val) {
+					b = strings.ReplaceAll(b, val, strconv.Itoa(j+1))
+				}
+			}
+
+			//remove repeating multiplications\
+
+			bsplit := strings.Split(b, "+")
+			for k, mon := range bsplit {
+				coefs := []string{}
+				for strings.Contains(mon, "_") {
+					index := strings.LastIndex(mon, "_") - 1
+					coefs = append(coefs, mon[index:])
+					mon = mon[0:index]
+				}
+
+				coefs = removeDuplicateValues(coefs)
+				bsplit[k] = strings.Join(coefs, "")
+			}
+
+			b = strings.Join(bsplit, "+")
+		}
+
+	}
+	return a
+}
+
+func add_bit_8(a uint8, b uint8) uint8 {
+
+	return a ^ b ^ ((a) & b << 1) ^ ((a ^ b) & ((a) & b << 1) << 1) ^ ((a ^ b ^ ((a) & b << 1)) & ((a ^ b) & ((a) & b << 1) << 1) << 1) ^ ((a ^ b ^ ((a) & b << 1) ^ ((a ^ b) & ((a) & b << 1) << 1)) & ((a ^ b ^ ((a) & b << 1)) & ((a ^ b) & ((a) & b << 1) << 1) << 1) << 1) ^ ((a ^ b ^ ((a) & b << 1) ^ ((a ^ b) & ((a) & b << 1) << 1) ^ ((a ^ b ^ ((a) & b << 1)) & ((a ^ b) & ((a) & b << 1) << 1) << 1)) & ((a ^ b ^ ((a) & b << 1) ^ ((a ^ b) & ((a) & b << 1) << 1)) & ((a ^ b ^ ((a) & b << 1)) & ((a ^ b) & ((a) & b << 1) << 1) << 1) << 1) << 1) ^ ((a ^ b ^ ((a) & b << 1) ^ ((a ^ b) & ((a) & b << 1) << 1) ^ ((a ^ b ^ ((a) & b << 1)) & ((a ^ b) & ((a) & b << 1) << 1) << 1) ^ ((a ^ b ^ ((a) & b << 1) ^ ((a ^ b) & ((a) & b << 1) << 1)) & ((a ^ b ^ ((a) & b << 1)) & ((a ^ b) & ((a) & b << 1) << 1) << 1) << 1)) & ((a ^ b ^ ((a) & b << 1) ^ ((a ^ b) & ((a) & b << 1) << 1) ^ ((a ^ b ^ ((a) & b << 1)) & ((a ^ b) & ((a) & b << 1) << 1) << 1)) & ((a ^ b ^ ((a) & b << 1) ^ ((a ^ b) & ((a) & b << 1) << 1)) & ((a ^ b ^ ((a) & b << 1)) & ((a ^ b) & ((a) & b << 1) << 1) << 1) << 1) << 1) << 1) ^ ((a ^ b ^ ((a) & b << 1) ^ ((a ^ b) & ((a) & b << 1) << 1) ^ ((a ^ b ^ ((a) & b << 1)) & ((a ^ b) & ((a) & b << 1) << 1) << 1) ^ ((a ^ b ^ ((a) & b << 1) ^ ((a ^ b) & ((a) & b << 1) << 1)) & ((a ^ b ^ ((a) & b << 1)) & ((a ^ b) & ((a) & b << 1) << 1) << 1) << 1) ^ ((a ^ b ^ ((a) & b << 1) ^ ((a ^ b) & ((a) & b << 1) << 1) ^ ((a ^ b ^ ((a) & b << 1)) & ((a ^ b) & ((a) & b << 1) << 1) << 1)) & ((a ^ b ^ ((a) & b << 1) ^ ((a ^ b) & ((a) & b << 1) << 1)) & ((a ^ b ^ ((a) & b << 1)) & ((a ^ b) & ((a) & b << 1) << 1) << 1) << 1) << 1)) & ((a ^ b ^ ((a) & b << 1) ^ ((a ^ b) & ((a) & b << 1) << 1) ^ ((a ^ b ^ ((a) & b << 1)) & ((a ^ b) & ((a) & b << 1) << 1) << 1) ^ ((a ^ b ^ ((a) & b << 1) ^ ((a ^ b) & ((a) & b << 1) << 1)) & ((a ^ b ^ ((a) & b << 1)) & ((a ^ b) & ((a) & b << 1) << 1) << 1) << 1)) & ((a ^ b ^ ((a) & b << 1) ^ ((a ^ b) & ((a) & b << 1) << 1) ^ ((a ^ b ^ ((a) & b << 1)) & ((a ^ b) & ((a) & b << 1) << 1) << 1)) & ((a ^ b ^ ((a) & b << 1) ^ ((a ^ b) & ((a) & b << 1) << 1)) & ((a ^ b ^ ((a) & b << 1)) & ((a ^ b) & ((a) & b << 1) << 1) << 1) << 1) << 1) << 1) << 1)
+}
+
+func add_bit_8_2(a uint8, b uint8) uint8 {
+	return (((a ^ b) ^ ((a << 1) & (b << 1))) ^ (((a ^ b) << 1) & (((a << 1) & (b << 1)) << 1)))
+
+	//a ^ b ^ ((a << 1) & (b << 1)) ^ ((a<<1) & ((a<<2) & (b<<2)) ^ (b<<1) & ((a<<2) & (b<<2)))
+
+}
+
+func removeDuplicateValues(stringSlice []string) []string {
+	keys := make(map[string]bool)
+	list := []string{}
+
+	// If the key(values of the slice) is not equal
+	// to the already present value in new slice (list)
+	// then we append it. else we jump on another element.
+	for _, entry := range stringSlice {
+		if _, value := keys[entry]; !value {
+			keys[entry] = true
+			list = append(list, entry)
+		}
+	}
+	return list
 }
